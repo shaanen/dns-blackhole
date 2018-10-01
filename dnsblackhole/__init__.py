@@ -111,6 +111,7 @@ def process_host_file_url(bh_list, white_list, zone_data, host_file_urls):
             sys.exit()
 
         if r.status_code != 200:
+            print('Incorrect return code from {0}: {1}. List skipped.'.format(url, r.status_code))
             # Continue to next url
             continue
         else:
@@ -168,6 +169,7 @@ def process_easylist_url(bh_list, white_list, zone_data, easy_list_url):
             sys.exit()
 
         if r.status_code != 200:
+            print('Incorrect return code from {0}: {1}. List skipped.'.format(url, r.status_code))
             # Continue to next url
             continue
         else:
@@ -238,8 +240,8 @@ def process_disconnect_url(bh_list, white_list, zone_data, d_url, d_cat):
             print('Seems like we did not fetch a json dict')
             sys.exit()
     else:
-        print('Incorrect return code from {0}: {1}'.format(d_url, r.status_code))
-        sys.exit()
+        print('Incorrect return code from {0}: {1}. Zonefile not created.'.format(d_url, r.status_code))
+        sys.exit(1)
 
     if 'categories' in j:
         for category in j['categories']:

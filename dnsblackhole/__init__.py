@@ -6,6 +6,8 @@ import yaml
 import requests
 import os
 import sys
+import hashlib
+import shutil
 
 # Required for correct utf8 formating on python2
 if sys.version_info[0] == 2:
@@ -89,6 +91,7 @@ def get_service(config):
     if 'dns-blackhole' in config:
         if 'config' in config['dns-blackhole']:
             zone_file = config['dns-blackhole']['config']['zone_file']
+            zone_file_dir = config['dns-blackhole']['config']['zone_file_dir']
             zone_data = config['dns-blackhole']['config']['zone_data']
             lists = config['dns-blackhole']['config']['blackhole_lists']
         else:
@@ -98,7 +101,7 @@ def get_service(config):
         print('Cannot find dns-blackhole section in config file.')
         sys.exit()
 
-    return zone_file, zone_data, lists
+    return zone_file, zone_file_dir, zone_data, lists
 
 
 def process_host_file_url(bh_list, white_list, zone_data, host_file_urls):
@@ -318,9 +321,27 @@ def build_bw_lists(bh_whitelist, bh_blacklist):
     return white_list, black_list
 
 
-def make_zone_file(bh_list, zone_file):
+def make_zone_file(bh_list, zone_file, zone_file_dir):
     f = open(zone_file, 'w')
+
+    # Define Unbound specific view:
+    f.write("view:    \nname: blacklistview\n")
+
     f.write('\n'.join(bh_list))
+
+    # Create checksum file and move blacklistview and checksum to webserver
+    open(zone_file + ".checksum", "w").write(sha256sum(zone_file))
+    shutil.move(os.path.abspath(zone_file), zone_file_dir + zone_file)
+    shutil.move(os.path.abspath(zone_file + ".checksum"), zone_file_dir +
+                zone_file + ".checksum")
+
+
+def sha256sum(filename):
+    h = hashlib.sha256()
+    with open(filename, 'rb', buffering=0) as f:
+        for b in iter(lambda: f.read(128*1024), b''):
+            h.update(b)
+    return h.hexdigest()
 
 
 def main():
@@ -331,7 +352,7 @@ def main():
     cache, log, bh_white, bh_black = get_general(config)
 
     # Get service config
-    zone_file, zone_data, lists = get_service(config)
+    zone_file, zone_file_dir, zone_data, lists = get_service(config)
 
     # Build whitelist/blacklist
     white_list, black_list = build_bw_lists(bh_white, bh_black)
@@ -360,7 +381,7 @@ def main():
     bh_list = process_black_list(bh_list, black_list, zone_data)
 
     # Create pdns file
-    make_zone_file(bh_list, zone_file)
+    make_zone_file(bh_list, zone_file, zone_file_dir)
 
 
 if __name__ == "__main__":

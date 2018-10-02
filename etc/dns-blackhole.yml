@@ -6,6 +6,7 @@ dns-blackhole:
     blacklist: /etc/dns-blackhole/blacklist
     blackhole_lists: &bh_lists
       hosts:
+        - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
         - http://someonewhocares.org/hosts/hosts
         - https://hosts-file.net/download/hosts.txt
         - http://winhelp2002.mvps.org/hosts.txt
@@ -14,16 +15,23 @@ dns-blackhole:
       easylist:
         - https://easylist.to/easylist/easylist.txt
         - https://raw.githubusercontent.com/paulgb/BarbBlock/master/BarbBlock.txt
-      disconnect:
+      disconnect: &bh_disconnect
         url: https://services.disconnect.me/disconnect-plaintext.json
         categories: # Advertising, Analytics, Disconnect, Social
           - Advertising
           - Analytics
+          - Disconnect
+          - Social
   config:
-    zone_file: /etc/unbound/blackhole.zone
+    zone_file: unbound-nxdomain.blacklist
+    zone_file_dir: /var/www/shaanen.nl/
     # {domain} will be replaced by the blackholed domain, do not change it here
     zone_data: 'local-zone: "{domain}" always_nxdomain' # For unbound
     # zone_data: '{domain}=' # For PowerDNS recursor
     # zone_data: 'server=/{domain}/' # For Dnsmasq
-    blackhole_lists: *bh_lists
+    # blackhole_lists: *bh_lists
+    blackhole_lists:
+      hosts:
+        - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+      disconnect: *bh_disconnect
 

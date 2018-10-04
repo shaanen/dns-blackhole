@@ -5,40 +5,25 @@ Code to reduce number of entries in blacklist from different sources: remove sub
 When combining blacklists from different sources, there may be many duplicates and redundant subdomains of parent domains.
 Working on some code which filters these efficiently.
 """
-
-from random import shuffle
 import sys
 
-input_domains = [line.rstrip() for line in open("manydomains.blacklist")]
+input_domains = [line.rstrip() for line in open("manydomains-shuffled.blacklist")]
+length = len(input_domains)
 domains = []
-shuffle(input_domains)
+counter = 0
 
 
-# Check if domain is subdomain of existing domain
-# Remove any subdomains of domain to be added
 def add_domain(new_domain):
 
-    # Only for first domain in list
-    if not domains:
-        domains.append(new_domain)
-        return
-
     for d in domains:
+        # Remove any existing subdomains of new domain
         if d.endswith(new_domain):
-            # print("{1} -> {0}".format(new_domain, d))
             domains.remove(d)
+        # Do not append; new domain is duplicate or subdomain of existing domain
         elif new_domain.endswith(d):
-            if new_domain == d:
-                print("Skipping duplicate {0}".format(new_domain))
-                return
-            else:
-                # print("New domain {0} is subdomain of {1}, so skipping {0}.".format(new_domain, d))
-                return
+            return
     domains.append(new_domain)
 
-
-counter = 0
-length = len(input_domains)
 
 for d in input_domains:
     counter += 1

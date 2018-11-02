@@ -15,7 +15,6 @@ if sys.version_info[0] == 2:
     sys.setdefaultencoding('utf-8')
 
 # Default variables
-
 DEFAULT_CONFIG_PATHS = ['{0}/.dns-blackhole.yml'.format(os.getenv("HOME")),
                         '/etc/dns-blackhole/dns-blackhole.yml',
                         './dns-blackhole.yml'
@@ -104,7 +103,7 @@ def get_service(config):
     return zone_file, zone_file_dir, zone_data, lists
 
 
-def process_host_file_url(bh_list, white_list, zone_data, host_file_urls):
+def process_host_file_url(bh_list, white_list, host_file_urls):
     for url in host_file_urls:
         try:
             print('[!] Fetch and parse URL: {0}'.format(url))
@@ -157,12 +156,12 @@ def process_host_file_url(bh_list, white_list, zone_data, host_file_urls):
 
                     # Now add the hosts to the list
                     if n_host not in white_list:
-                        bh_list.append(zone_data.format(**{'domain': n_host}))
+                        bh_list.append(n_host[::-1])
 
     return bh_list
 
 
-def process_easylist_url(bh_list, white_list, zone_data, easy_list_url):
+def process_easylist_url(bh_list, white_list, easy_list_url):
     for url in easy_list_url:
         try:
             print('[!] Fetch and parse URL: {0}'.format(url))
@@ -223,12 +222,12 @@ def process_easylist_url(bh_list, white_list, zone_data, easy_list_url):
 
                     # Now add the hosts to the list
                     if n_host not in white_list:
-                        bh_list.append(zone_data.format(**{'domain': n_host}))
+                        bh_list.append(n_host[::-1])
 
     return bh_list
 
 
-def process_disconnect_url(bh_list, white_list, zone_data, d_url, d_cat):
+def process_disconnect_url(bh_list, white_list, d_url, d_cat):
     try:
         print('[!] Fetch and parse URL: {0}'.format(d_url))
         r = requests.get(d_url)
@@ -258,21 +257,19 @@ def process_disconnect_url(bh_list, white_list, zone_data, d_url, d_cat):
                                     if host == '':
                                         continue
                                     if host not in white_list:
-                                        bh_list.append(zone_data.format(**{'domain': host}))
+                                        bh_list.append(host[::-1])
     else:
         print('"categories" key not found in dict, nothing to process')
         return bh_list
-
-    # Return the list sorted
     return bh_list
 
 
-def process_black_list(bh_list, black_list, zone_data):
+def process_black_list(bh_list, black_list):
     for bl_host in black_list:
-        bh_list.append(zone_data.format(**{'domain': bl_host}))
+        bh_list.append(bl_host[::-1])
 
     # Return the list sorted
-    return sorted(list(set(bh_list)))
+    return bh_list
 
 
 def build_bw_lists(bh_whitelist, bh_blacklist):
@@ -321,19 +318,38 @@ def build_bw_lists(bh_whitelist, bh_blacklist):
     return white_list, black_list
 
 
-def make_zone_file(bh_list, zone_file, zone_file_dir):
+def make_zone_file(bh_list, zone_file, zone_file_dir, zone_data):
     f = open(zone_file, 'w')
 
     # Define Unbound specific view:
     f.write("view:    \nname: blacklistview\n")
 
-    f.write('\n'.join(bh_list))
+    # Un-reverse all elements
+    bh_list = [d[::-1] for d in bh_list]
+
+    # Sort and remove duplicates
+    bh_list = sorted(list(set(bh_list)))
+
+    for d in bh_list:
+        f.write(zone_data.format(**{'domain': d}) + "\n")
 
     # Create checksum file and move blacklistview and checksum to webserver
     open(zone_file + ".checksum", "w").write(sha256sum(zone_file))
     shutil.move(os.path.abspath(zone_file), zone_file_dir + zone_file)
     shutil.move(os.path.abspath(zone_file + ".checksum"), zone_file_dir +
                 zone_file + ".checksum")
+
+def remove_subdomains(bh_list):
+    bh_list_filtered = ["dummy_element"]
+    for d in bh_list:
+        # Only add d to new list if d does not start with last element in new list
+        if not d.find(bh_list_filtered[-1]) == 0:
+            bh_list_filtered.append(d)
+
+    # Remove dummy_element
+    del bh_list_filtered[0]
+    
+    return bh_list_filtered
 
 
 def sha256sum(filename):
@@ -359,13 +375,14 @@ def main():
 
     # Now populate bh_list based on our config
     bh_list = []
+    
     # First process host files if set
     if 'hosts' in lists:
-        bh_list = process_host_file_url(bh_list, white_list, zone_data, lists['hosts'])
+        bh_list = process_host_file_url(bh_list, white_list, lists['hosts'])
 
     # Then easylist
     if 'easylist' in lists:
-        bh_list = process_easylist_url(bh_list, white_list, zone_data, lists['easylist'])
+        bh_list = process_easylist_url(bh_list, white_list, lists['easylist'])
 
     # Finally disconnect
     if 'disconnect' in lists:
@@ -373,15 +390,19 @@ def main():
         d_cat = lists['disconnect']['categories']
         bh_list = process_disconnect_url(bh_list,
                                          white_list,
-                                         zone_data,
                                          d_url,
                                          d_cat)
 
-    # Add hosts from blacklist and return sorted bh_list
-    bh_list = process_black_list(bh_list, black_list, zone_data)
+   # bh_list = [line.rstrip() for line in open("manydomains-reversed.blacklist")]
+
+    # Add hosts from blacklist
+    bh_list = process_black_list(bh_list, black_list)
+
+    # Remove subdomains
+    bh_list = remove_subdomains(bh_list)
 
     # Create pdns file
-    make_zone_file(bh_list, zone_file, zone_file_dir)
+    make_zone_file(bh_list, zone_file, zone_file_dir, zone_data)
 
 
 if __name__ == "__main__":

@@ -268,7 +268,6 @@ def process_black_list(bh_list, black_list):
     for bl_host in black_list:
         bh_list.append(bl_host[::-1])
 
-    # Return the list sorted
     return bh_list
 
 
@@ -340,11 +339,14 @@ def make_zone_file(bh_list, zone_file, zone_file_dir, zone_data):
                 zone_file + ".checksum")
 
 def remove_subdomains(bh_list):
+    bh_list.sort()
     bh_list_filtered = ["dummy_element"]
     for d in bh_list:
         # Only add d to new list if d does not start with last element in new list
         if not d.find(bh_list_filtered[-1]) == 0:
             bh_list_filtered.append(d)
+        else:
+            print("{0} starts with last element {1}".format(d, bh_list_filtered[-1]))
 
     # Remove dummy_element
     del bh_list_filtered[0]

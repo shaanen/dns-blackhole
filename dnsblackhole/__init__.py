@@ -345,8 +345,8 @@ def remove_subdomains(bh_list):
         # Only add d to new list if d does not start with last element in new list
         if not d.find(bh_list_filtered[-1]) == 0:
             bh_list_filtered.append(d)
-        else:
-            print("{0} starts with last element {1}".format(d, bh_list_filtered[-1]))
+       # else:
+       #     print("{0} starts with last element {1}".format(d, bh_list_filtered[-1]))
 
     # Remove dummy_element
     del bh_list_filtered[0]

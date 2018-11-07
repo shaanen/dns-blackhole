@@ -93,6 +93,15 @@ def get_service(config):
             zone_file_dir = config['dns-blackhole']['config']['zone_file_dir']
             zone_data = config['dns-blackhole']['config']['zone_data']
             lists = config['dns-blackhole']['config']['blackhole_lists']
+            if 'prefix' in config['dns-blackhole']['config']:
+                prefix = config['dns-blackhole']['config']['prefix']
+            else:
+                prefix = ""
+            if 'suffix' in config['dns-blackhole']['config']:
+                suffix = config['dns-blackhole']['config']['suffix']
+            else:
+                suffix = ""
+            
         else:
             print('Cannot find "config" section in config file.')
             sys.exit()
@@ -100,7 +109,7 @@ def get_service(config):
         print('Cannot find dns-blackhole section in config file.')
         sys.exit()
 
-    return zone_file, zone_file_dir, zone_data, lists
+    return zone_file, zone_file_dir, zone_data, lists, prefix, suffix
 
 
 def process_host_file_url(bh_list, white_list, host_file_urls):
@@ -317,11 +326,15 @@ def build_bw_lists(bh_whitelist, bh_blacklist):
     return white_list, black_list
 
 
-def make_zone_file(bh_list, zone_file, zone_file_dir, zone_data):
+def make_zone_file(bh_list, zone_file, zone_file_dir, zone_data, prefix, suffix):
     f = open(zone_file, 'w')
 
     # Define Unbound specific view:
-    f.write("view:    \nname: blacklistview\n")
+    # f.write("view:    \nname: blacklistview\n")
+    if prefix:
+        print("prefix")
+        f.write(prefix)
+        tmp = 'view:    \nname: blacklistview\n'
 
     # Un-reverse all elements
     bh_list = [d[::-1] for d in bh_list]
@@ -332,11 +345,16 @@ def make_zone_file(bh_list, zone_file, zone_file_dir, zone_data):
     for d in bh_list:
         f.write(zone_data.format(**{'domain': d}) + "\n")
 
+    if suffix:
+        print("prefix")
+        f.write(suffix)
+
     # Create checksum file and move blacklistview and checksum to webserver
     open(zone_file + ".checksum", "w").write(sha256sum(zone_file))
     shutil.move(os.path.abspath(zone_file), zone_file_dir + zone_file)
     shutil.move(os.path.abspath(zone_file + ".checksum"), zone_file_dir +
                 zone_file + ".checksum")
+    print("Saved zone file to " + zone_file_dir + zone_file)
 
 def remove_subdomains(bh_list):
     bh_list.sort()
@@ -370,7 +388,7 @@ def main():
     cache, log, bh_white, bh_black = get_general(config)
 
     # Get service config
-    zone_file, zone_file_dir, zone_data, lists = get_service(config)
+    zone_file, zone_file_dir, zone_data, lists, prefix, suffix = get_service(config)
 
     # Build whitelist/blacklist
     white_list, black_list = build_bw_lists(bh_white, bh_black)
@@ -378,24 +396,24 @@ def main():
     # Now populate bh_list based on our config
     bh_list = []
     
-    # First process host files if set
-    if 'hosts' in lists:
-        bh_list = process_host_file_url(bh_list, white_list, lists['hosts'])
+   # # First process host files if set
+   # if 'hosts' in lists:
+   #     bh_list = process_host_file_url(bh_list, white_list, lists['hosts'])
 
-    # Then easylist
-    if 'easylist' in lists:
-        bh_list = process_easylist_url(bh_list, white_list, lists['easylist'])
+   # # Then easylist
+   # if 'easylist' in lists:
+   #     bh_list = process_easylist_url(bh_list, white_list, lists['easylist'])
 
-    # Finally disconnect
-    if 'disconnect' in lists:
-        d_url = lists['disconnect']['url']
-        d_cat = lists['disconnect']['categories']
-        bh_list = process_disconnect_url(bh_list,
-                                         white_list,
-                                         d_url,
-                                         d_cat)
+   # # Finally disconnect
+   # if 'disconnect' in lists:
+   #     d_url = lists['disconnect']['url']
+   #     d_cat = lists['disconnect']['categories']
+   #     bh_list = process_disconnect_url(bh_list,
+   #                                      white_list,
+   #                                      d_url,
+   #                                      d_cat)
 
-   # bh_list = [line.rstrip() for line in open("manydomains-reversed.blacklist")]
+    bh_list = [line.rstrip()[::-1] for line in open("10-domains.blacklist")]
 
     # Add hosts from blacklist
     bh_list = process_black_list(bh_list, black_list)
@@ -404,7 +422,7 @@ def main():
     bh_list = remove_subdomains(bh_list)
 
     # Create pdns file
-    make_zone_file(bh_list, zone_file, zone_file_dir, zone_data)
+    make_zone_file(bh_list, zone_file, zone_file_dir, zone_data, prefix, suffix)
 
 
 if __name__ == "__main__":

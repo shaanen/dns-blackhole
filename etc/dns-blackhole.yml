@@ -24,14 +24,16 @@ dns-blackhole:
           - Social
   config:
     zone_file: unbound-nxdomain.blacklist
-    zone_file_dir: /var/www/shaanen.nl/
+    zone_file_dir: './'
     # {domain} will be replaced by the blackholed domain, do not change it here
-    zone_data: 'local-zone: "{domain}" always_nxdomain' # For unbound
+    zone_data: 'local-zone: "{domain}" always_nxdomain' # For Unbound
     # zone_data: '{domain}=' # For PowerDNS recursor
     # zone_data: 'server=/{domain}/' # For Dnsmasq
-    # blackhole_lists: *bh_lists
-    blackhole_lists:
-      hosts:
-        - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
-      disconnect: *bh_disconnect
-
+    blackhole_lists: *bh_lists
+    # blackhole_lists:
+    #   hosts:
+    #     - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+    # disconnect: *bh_disconnect
+    # [Optional entries]:
+    prefix: "view:    \nname: blacklistview\n" # Define the blacklist as Unbound view
+    suffix:

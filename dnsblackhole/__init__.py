@@ -17,8 +17,7 @@ if sys.version_info[0] == 2:
 # Default variables
 DEFAULT_CONFIG_PATHS = ['{0}/.dns-blackhole.yml'.format(os.getenv("HOME")),
                         '/etc/dns-blackhole/dns-blackhole.yml',
-                        './dns-blackhole.yml'
-                       ]
+                        './dns-blackhole.yml']
 CACHE = '/var/cache/dns-blackhole'
 LOG = '/var/log/dns-blackhole/dns-blackhole.log'
 WHITELIST = '/etc/dns-blackhole/whitelist'
@@ -29,13 +28,19 @@ BLACKLIST = '/etc/dns-blackhole/blacklist'
 def load_config():
     config_file = None
 
-    # Save its path if we find one
-    for config in DEFAULT_CONFIG_PATHS:
-        if os.path.isfile(config):
-            config_file = config
-            break
+    if len(sys.argv) is 2:
+        #  A config file is given as argument
+        config_file = sys.argv[1]
 
-    # Exit if not
+    elif len(sys.argv) is 1:
+        # Save its path if we find one
+        for config in DEFAULT_CONFIG_PATHS:
+            if os.path.isfile(config):
+                config_file = config
+                break
+    else:
+        sys.exit('Too many arguments. Only accepting an optional config file')
+
     if config_file is None:
         print('Unable to find a config file in: {0}'.format(DEFAULT_CONFIG_PATHS))
         sys.exit()
@@ -50,7 +55,9 @@ def load_config():
             yaml_config = yaml.load(f)
         except yaml.YAMLError as exc:
             print("Error in configuration file: {0}".format(exc))
+            sys.exit()
 
+    print('Using config file "{}"'.format(config_file))
     return yaml_config
 
 
@@ -101,7 +108,6 @@ def get_service(config):
                 suffix = config['dns-blackhole']['config']['suffix']
             else:
                 suffix = ""
-            
         else:
             print('Cannot find "config" section in config file.')
             sys.exit()
@@ -356,6 +362,7 @@ def make_zone_file(bh_list, zone_file, zone_file_dir, zone_data, prefix, suffix)
                 zone_file + ".checksum")
     print("Saved zone file to " + zone_file_dir + zone_file)
 
+
 def remove_subdomains(bh_list):
     bh_list.sort()
     bh_list_filtered = ["dummy_element"]
@@ -363,19 +370,18 @@ def remove_subdomains(bh_list):
         # Only add d to new list if d does not start with last element in new list
         if not d.find(bh_list_filtered[-1]) == 0:
             bh_list_filtered.append(d)
-       # else:
-       #     print("{0} starts with last element {1}".format(d, bh_list_filtered[-1]))
+        # else:
+        #     print("{0} starts with last element {1}".format(d, bh_list_filtered[-1]))
 
     # Remove dummy_element
     del bh_list_filtered[0]
-    
     return bh_list_filtered
 
 
 def sha256sum(filename):
     h = hashlib.sha256()
     with open(filename, 'rb', buffering=0) as f:
-        for b in iter(lambda: f.read(128*1024), b''):
+        for b in iter(lambda: f.read(128 * 1024), b''):
             h.update(b)
     return h.hexdigest()
 
@@ -395,25 +401,25 @@ def main():
 
     # Now populate bh_list based on our config
     bh_list = []
-    
-   # # First process host files if set
-   # if 'hosts' in lists:
-   #     bh_list = process_host_file_url(bh_list, white_list, lists['hosts'])
 
-   # # Then easylist
-   # if 'easylist' in lists:
-   #     bh_list = process_easylist_url(bh_list, white_list, lists['easylist'])
+    # First process host files if set
+    if 'hosts' in lists:
+        bh_list = process_host_file_url(bh_list, white_list, lists['hosts'])
 
-   # # Finally disconnect
-   # if 'disconnect' in lists:
-   #     d_url = lists['disconnect']['url']
-   #     d_cat = lists['disconnect']['categories']
-   #     bh_list = process_disconnect_url(bh_list,
-   #                                      white_list,
-   #                                      d_url,
-   #                                      d_cat)
+    # Then easylist
+    if 'easylist' in lists:
+        bh_list = process_easylist_url(bh_list, white_list, lists['easylist'])
 
-    bh_list = [line.rstrip()[::-1] for line in open("10-domains.blacklist")]
+    # Finally disconnect
+    if 'disconnect' in lists:
+        d_url = lists['disconnect']['url']
+        d_cat = lists['disconnect']['categories']
+        bh_list = process_disconnect_url(bh_list,
+                                         white_list,
+                                         d_url,
+                                         d_cat)
+
+    # bh_list = [line.rstrip()[::-1] for line in open("10-domains.blacklist")]
 
     # Add hosts from blacklist
     bh_list = process_black_list(bh_list, black_list)

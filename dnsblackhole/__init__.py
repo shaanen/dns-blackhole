@@ -18,17 +18,15 @@ if sys.version_info[0] == 2:
 DEFAULT_CONFIG_PATHS = ['{0}/.dns-blackhole.yml'.format(os.getenv("HOME")),
                         '/etc/dns-blackhole/dns-blackhole.yml',
                         './dns-blackhole.yml']
-CACHE = '/var/cache/dns-blackhole'
-LOG = '/var/log/dns-blackhole/dns-blackhole.log'
-WHITELIST = '/etc/dns-blackhole/whitelist'
-BLACKLIST = '/etc/dns-blackhole/blacklist'
+
+# Config file
+config_file = None
 # List to print the used sources as comments in blacklist
 used_sources = []
 
 
 # Load yaml config
 def load_config():
-    config_file = None
 
     if len(sys.argv) is 2:
         #  A config file is given as argument
@@ -66,25 +64,16 @@ def load_config():
 def get_general(config):
     if 'dns-blackhole' in config:
         if 'general' in config['dns-blackhole']:
-            if 'cache' in config['dns-blackhole']['general']:
-                cache = config['dns-blackhole']['general']['cache']
-            else:
-                cache = CACHE
-
-            if 'log' in config['dns-blackhole']['general']:
-                log = config['dns-blackhole']['general']['log']
-            else:
-                log = LOG
-
+            
             if 'whitelist' in config['dns-blackhole']['general']:
                 whitelist = config['dns-blackhole']['general']['whitelist']
             else:
-                whitelist = WHITELIST
+                whitelist = os.path.dirname(config_file) + '/whitelist'
 
             if 'blacklist' in config['dns-blackhole']['general']:
                 blacklist = config['dns-blackhole']['general']['blacklist']
             else:
-                blacklist = BLACKLIST
+                blacklist = os.path.dirname(config_file) + '/blacklist' 
         else:
             print('Missing general section in config file')
             sys.exit()
@@ -92,7 +81,7 @@ def get_general(config):
         print('Cannot find dns-blackhole section in config file.')
         sys.exit()
 
-    return cache, log, whitelist, blacklist
+    return whitelist, blacklist
 
 
 def get_service(config):
@@ -236,7 +225,6 @@ def process_easylist_url(bh_list, white_list, easy_list_url):
                     # Now add the hosts to the list
                     if n_host not in white_list:
                         bh_list.append(n_host[::-1])
-
     return bh_list
 
 
@@ -303,9 +291,7 @@ def build_bw_lists(bh_whitelist, bh_blacklist):
     except:
         print('Cannot open {0}: {1}'.format(bh_blacklist, sys.exc_info()[0]))
 
-    # Loop over the line and append them to the the list
     if w:
-        used_sources.append("Custom local whitelist")
         for line in w.readlines():
             # Ignore comments
             if not line.startswith('#'):
@@ -318,7 +304,6 @@ def build_bw_lists(bh_whitelist, bh_blacklist):
                         white_list.append(line.strip())
 
     if b:
-        used_sources.append("Custom local blacklist")
         for line in b.readlines():
             # Ignore comments
             if not line.startswith('#'):
@@ -329,7 +314,12 @@ def build_bw_lists(bh_whitelist, bh_blacklist):
                     # Ignore empty lines
                     if not line.strip() == '':
                         black_list.append(line.strip())
-
+    if white_list:
+        print('Using {0} domains from whitelist "{1}"'.format(len(white_list), bh_whitelist))
+        used_sources.append("Custom local whitelist")
+    if black_list:
+        print('Using {0} domains from blacklist "{1}"'.format(len(black_list), bh_blacklist))
+        used_sources.append("Custom local blacklist")
     return white_list, black_list
 
 
@@ -396,7 +386,7 @@ def main():
     config = load_config()
 
     # Get general settings
-    cache, log, bh_white, bh_black = get_general(config)
+    bh_white, bh_black = get_general(config)
 
     # Get service config
     zone_file, zone_file_dir, zone_data, lists, prefix, suffix = get_service(config)

@@ -115,7 +115,7 @@ dns-blackhole:
 
 ```
 
-In this example you would only use the host files as source. This example also creates an Unbound view called `blacklistview` by adding the `prefix`.
+In this example you would only use the host files as source. The optional `prefix` entry defines the blacklist as an Unbound view called `blacklistview`.
 
 FAQ
 ---

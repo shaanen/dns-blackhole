@@ -1,7 +1,7 @@
 dns-blackhole:
   general:
-    whitelist: /etc/dns-blackhole/whitelist
-    blacklist: /etc/dns-blackhole/blacklist
+    whitelist:
+    blacklist:
     blackhole_lists: &bh_lists
       hosts: &bh_hosts
         - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
@@ -30,6 +30,5 @@ dns-blackhole:
     # blackhole_lists: *bh_lists
     blackhole_lists:
       hosts: *bh_hosts
-    # [Optional entries]:
     prefix: "view:    \nname: blacklistview\n" # Define the blacklist as Unbound view
     suffix:

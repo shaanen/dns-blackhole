@@ -21,13 +21,14 @@ DEFAULT_CONFIG_PATHS = ['{0}/.dns-blackhole.yml'.format(os.getenv("HOME")),
 
 # Config file
 config_file = None
+
 # List to print the used sources as comments in blacklist
 used_sources = []
 
 
 # Load yaml config
 def load_config():
-
+    global config_file
     if len(sys.argv) is 2:
         #  A config file is given as argument
         config_file = sys.argv[1]
@@ -64,16 +65,15 @@ def load_config():
 def get_general(config):
     if 'dns-blackhole' in config:
         if 'general' in config['dns-blackhole']:
-            
-            if 'whitelist' in config['dns-blackhole']['general']:
+            if 'whitelist' in config['dns-blackhole']['general'] and config['dns-blackhole']['general']['whitelist'] is not None:
                 whitelist = config['dns-blackhole']['general']['whitelist']
             else:
                 whitelist = os.path.dirname(config_file) + '/whitelist'
 
-            if 'blacklist' in config['dns-blackhole']['general']:
+            if 'blacklist' in config['dns-blackhole']['general'] and config['dns-blackhole']['general']['blacklist'] is not None:
                 blacklist = config['dns-blackhole']['general']['blacklist']
             else:
-                blacklist = os.path.dirname(config_file) + '/blacklist' 
+                blacklist = os.path.dirname(config_file) + '/blacklist'
         else:
             print('Missing general section in config file')
             sys.exit()

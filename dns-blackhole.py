@@ -14,14 +14,7 @@ if sys.version_info[0] == 2:
     reload(sys)
     sys.setdefaultencoding('utf-8')
 
-# Default variables
-DEFAULT_CONFIG_PATHS = ['{0}/.dns-blackhole.yml'.format(os.getenv("HOME")),
-                        '/etc/dns-blackhole/dns-blackhole.yml',
-                        './dns-blackhole.yml']
-
-# Config file
 config_file = None
-
 # List to print the used sources as comments in blacklist
 used_sources = []
 
@@ -29,34 +22,23 @@ used_sources = []
 # Load yaml config
 def load_config():
     global config_file
+
     if len(sys.argv) is 2:
-        #  A config file is given as argument
-        config_file = sys.argv[1]
-
-    elif len(sys.argv) is 1:
-        # Save its path if we find one
-        for config in DEFAULT_CONFIG_PATHS:
-            if os.path.isfile(config):
-                config_file = config
-                break
+        config_file = os.path.abspath(sys.argv[1])
     else:
-        sys.exit('Too many arguments. Only accepting an optional config file')
+        sys.exit('Script only accepts a single argument: the config file.')
 
-    if config_file is None:
-        print('Unable to find a config file in: {0}'.format(DEFAULT_CONFIG_PATHS))
+    try:
+        f = open(config_file, 'r')
+    except:
+        print('Error opening {0}: {1}'.format(config_file, sys.exc_info()[0]))
         sys.exit()
-    else:
-        try:
-            f = open(config_file, 'r')
-        except:
-            print('Error opening {0}: {1}'.format(config_file, sys.exc_info()[0]))
-            sys.exit()
 
-        try:
-            yaml_config = yaml.load(f)
-        except yaml.YAMLError as exc:
-            print("Error in configuration file: {0}".format(exc))
-            sys.exit()
+    try:
+        yaml_config = yaml.load(f)
+    except yaml.YAMLError as exc:
+        print("Error in configuration file: {0}".format(exc))
+        sys.exit()
 
     print('Using config file "{}"'.format(config_file))
     return yaml_config
@@ -68,12 +50,12 @@ def get_general(config):
             if 'whitelist' in config['dns-blackhole']['general'] and config['dns-blackhole']['general']['whitelist'] is not None:
                 whitelist = config['dns-blackhole']['general']['whitelist']
             else:
-                whitelist = os.path.dirname(config_file) + './whitelist'
+                whitelist = os.path.dirname(config_file) + '/whitelist'
 
             if 'blacklist' in config['dns-blackhole']['general'] and config['dns-blackhole']['general']['blacklist'] is not None:
                 blacklist = config['dns-blackhole']['general']['blacklist']
             else:
-                blacklist = os.path.dirname(config_file) + './blacklist'
+                blacklist = os.path.dirname(config_file) + '/blacklist'
         else:
             print('Missing general section in config file')
             sys.exit()

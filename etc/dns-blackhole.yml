@@ -1,18 +1,16 @@
 dns-blackhole:
   general:
-    cache: /var/cache/dns-blackhole
-    log: /var/log/dns-blackhole/dns-blackhole.log
     whitelist: /etc/dns-blackhole/whitelist
     blacklist: /etc/dns-blackhole/blacklist
     blackhole_lists: &bh_lists
-      hosts:
+      hosts: &bh_hosts
         - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
         - http://someonewhocares.org/hosts/hosts
         - https://hosts-file.net/download/hosts.txt
         - http://winhelp2002.mvps.org/hosts.txt
       # - http://www.malwaredomainlist.com/hostslist/hosts.txt # Website down as of November 13th 2018
         - https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts;showintro=0
-      easylist:
+      easylist: &bh_easylist
         - https://easylist.to/easylist/easylist.txt
         - https://raw.githubusercontent.com/paulgb/BarbBlock/master/BarbBlock.txt
       disconnect: &bh_disconnect
@@ -29,11 +27,9 @@ dns-blackhole:
     zone_data: 'local-zone: "{domain}" always_nxdomain' # For Unbound
     # zone_data: '{domain}=' # For PowerDNS recursor
     # zone_data: 'server=/{domain}/' # For Dnsmasq
-    blackhole_lists: *bh_lists
-    # blackhole_lists:
-    #   hosts:
-    #     - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
-    # disconnect: *bh_disconnect
+    # blackhole_lists: *bh_lists
+    blackhole_lists:
+      hosts: *bh_hosts
     # [Optional entries]:
     prefix: "view:    \nname: blacklistview\n" # Define the blacklist as Unbound view
     suffix:

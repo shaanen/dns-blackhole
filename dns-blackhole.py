@@ -68,12 +68,12 @@ def get_general(config):
             if 'whitelist' in config['dns-blackhole']['general'] and config['dns-blackhole']['general']['whitelist'] is not None:
                 whitelist = config['dns-blackhole']['general']['whitelist']
             else:
-                whitelist = os.path.dirname(config_file) + '/whitelist'
+                whitelist = os.path.dirname(config_file) + './whitelist'
 
             if 'blacklist' in config['dns-blackhole']['general'] and config['dns-blackhole']['general']['blacklist'] is not None:
                 blacklist = config['dns-blackhole']['general']['blacklist']
             else:
-                blacklist = os.path.dirname(config_file) + '/blacklist'
+                blacklist = os.path.dirname(config_file) + './blacklist'
         else:
             print('Missing general section in config file')
             sys.exit()

@@ -22,7 +22,7 @@ dns-blackhole:
           - Social
   config:
     zone_file: unbound-nxdomain.blacklist
-    zone_file_dir: './'
+    zone_file_dir: '/var/www/shaanen.nl/'
     # {domain} will be replaced by the blackholed domain, do not change it here
     zone_data: 'local-zone: "{domain}" always_nxdomain' # For Unbound
     # zone_data: '{domain}=' # For PowerDNS recursor

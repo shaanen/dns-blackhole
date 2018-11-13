@@ -22,6 +22,8 @@ CACHE = '/var/cache/dns-blackhole'
 LOG = '/var/log/dns-blackhole/dns-blackhole.log'
 WHITELIST = '/etc/dns-blackhole/whitelist'
 BLACKLIST = '/etc/dns-blackhole/blacklist'
+# List to print the used sources as comments in blacklist
+used_sources = []
 
 
 # Load yaml config
@@ -124,14 +126,12 @@ def process_host_file_url(bh_list, white_list, host_file_urls):
             print('[!] Fetch and parse URL: {0}'.format(url))
             r = requests.get(url)
         except:
-            print('Request to {0} failed: {1}'.format(url, sys.exc_info()[0]))
-            sys.exit()
+            sys.exit('Request to {0} failed: {1}'.format(url, sys.exc_info()[0]))
 
         if r.status_code != 200:
-            print('Incorrect return code from {0}: {1}. List skipped.'.format(url, r.status_code))
-            # Continue to next url
-            continue
+            sys.exit('Incorrect return code from {0}: {1}.'.format(url, r.status_code))
         else:
+            used_sources.append(r.url)
             for line in r.iter_lines():
                 try:
                     # If utf8 decode fails jumps next item
@@ -182,14 +182,12 @@ def process_easylist_url(bh_list, white_list, easy_list_url):
             print('[!] Fetch and parse URL: {0}'.format(url))
             r = requests.get(url)
         except:
-            print('Request to {0} failed: {1}'.format(url, sys.exc_info()[0]))
-            sys.exit()
+            sys.exit('Request to {0} failed: {1}.'.format(url, sys.exc_info()[0]))
 
         if r.status_code != 200:
-            print('Incorrect return code from {0}: {1}. List skipped.'.format(url, r.status_code))
-            # Continue to next url
-            continue
+            sys.exit('Incorrect return code from {0}: {1}.'.format(url, r.status_code))
         else:
+            used_sources.append(r.url)
             for line in r.iter_lines():
                 try:
                     # If utf8 decode fails jumps next item
@@ -260,6 +258,7 @@ def process_disconnect_url(bh_list, white_list, d_url, d_cat):
         print('Incorrect return code from {0}: {1}. Zonefile not created.'.format(d_url, r.status_code))
         sys.exit(1)
 
+    used_sources.append(r.url)
     if 'categories' in j:
         for category in j['categories']:
             if category in d_cat:
@@ -306,6 +305,7 @@ def build_bw_lists(bh_whitelist, bh_blacklist):
 
     # Loop over the line and append them to the the list
     if w:
+        used_sources.append("Custom local whitelist")
         for line in w.readlines():
             # Ignore comments
             if not line.startswith('#'):
@@ -318,6 +318,7 @@ def build_bw_lists(bh_whitelist, bh_blacklist):
                         white_list.append(line.strip())
 
     if b:
+        used_sources.append("Custom local blacklist")
         for line in b.readlines():
             # Ignore comments
             if not line.startswith('#'):
@@ -335,12 +336,16 @@ def build_bw_lists(bh_whitelist, bh_blacklist):
 def make_zone_file(bh_list, zone_file, zone_file_dir, zone_data, prefix, suffix):
     f = open(zone_file, 'w')
 
+    # First print all sources as comments
+    f.write("# Sources: \n")
+    used_sources_commented = ["# " + u for u in used_sources]
+    f.write(("\n").join(used_sources_commented))
+    f.write("\n")
+
     # Define Unbound specific view:
     # f.write("view:    \nname: blacklistview\n")
     if prefix:
-        print("prefix")
         f.write(prefix)
-        tmp = 'view:    \nname: blacklistview\n'
 
     # Un-reverse all elements
     bh_list = [d[::-1] for d in bh_list]
@@ -352,10 +357,10 @@ def make_zone_file(bh_list, zone_file, zone_file_dir, zone_data, prefix, suffix)
         f.write(zone_data.format(**{'domain': d}) + "\n")
 
     if suffix:
-        print("prefix")
         f.write(suffix)
+    f.close()
 
-    # Create checksum file and move blacklistview and checksum to webserver
+    # Create checksum file and move blacklistview and checksum file to specified dir
     open(zone_file + ".checksum", "w").write(sha256sum(zone_file))
     shutil.move(os.path.abspath(zone_file), zone_file_dir + zone_file)
     shutil.move(os.path.abspath(zone_file + ".checksum"), zone_file_dir +

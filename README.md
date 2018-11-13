@@ -25,19 +25,13 @@ Features
 - Lets you whitelist/blacklist domains
 - YAML configuration file
 
-Installation
-------------
 
-The script requires `PyYAML` and `requests` modules.
-
-``` bash
-pip install [--upgrade] dns-blackhole
-```
+## Installation per DNS resolver
 
 #### Unbound  
 
 Requires unbound >= `1.6`, using the default zone file with unbound `1.5` will certainly make it eat all your ram and swap before getting killed.  
-Add `include: "/etc/unbound/blackhole.zone"` right after your `server:` block.  
+Add `include: "<zone_file>"` right after your `server:` block.  
 Use the following `zone_data` in your `dns-blackhole.yml` (default):
 
 ``` yaml
@@ -48,7 +42,7 @@ zone_data: 'local-zone: "{domain}" always_nxdomain'
 
 #### PowerDNS Recursor  
 
-Add `forward-zones-file=/etc/pdns/blackhole.zone` in your recursor configuration.  
+Add `forward-zones-file=/etc/pdns/<zone_file>` in your recursor configuration.  
 Use the following `zone_data` in your `dns-blackhole.yml`:
 
 ``` yaml
@@ -59,7 +53,7 @@ zone_data: '{domain}='
 
 #### Dnsmasq  
 
-Add `conf-dir=/etc/dnsmasq.d` in your dnsmasq config and point your `zone_file` option to `/etc/dnsmasq.d/blackhole.conf`  
+Add `conf-dir=/etc/dnsmasq.d` in your dnsmasq config and point your `zone_file` option to `/etc/dnsmasq.d/<zone_file>`  
 Use the following `zone_data` in your `dns-blackhole.yml`:
 
 ``` yaml
@@ -76,8 +70,7 @@ Use the following `zone_data` in your `dns-blackhole.yml`:
 zone_data: '127.0.0.1 {domain}'
 ```
 
-Once you're happy with your configuration Just run `dns-blackhole`.  
-The default lists in `dns-blackhole.yml` will generate a zone containing ~698000 entries.  
+Once you're happy with your configuration Just run `python3 dns-blackhole.py dns-blackhole.yml`.    
 
 Configuration
 -------------
@@ -87,18 +80,17 @@ As the configuration file is in YAML, you can use YAML anchors
 ```yaml
 dns-blackhole:
   general:
-    cache: /var/cache/dns-blackhole
-    log: /var/log/dns-blackhole/dns-blackhole.log
-    whitelist: /etc/dns-blackhole/whitelist
-    blacklist: /etc/dns-blackhole/blacklist
-    blackhole_lists:
-      hosts:
+    whitelist:
+    blacklist:
+    blackhole_lists: &bh_lists
+      hosts: &bh_hosts
+        - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
         - http://someonewhocares.org/hosts/hosts
         - https://hosts-file.net/download/hosts.txt
         - http://winhelp2002.mvps.org/hosts.txt
-        - http://www.malwaredomainlist.com/hostslist/hosts.txt
+      # - http://www.malwaredomainlist.com/hostslist/hosts.txt # Website down as of November 13th 2018
         - https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts;showintro=0
-      easylist: &bh_easy
+      easylist: &bh_easylist
         - https://easylist.to/easylist/easylist.txt
         - https://raw.githubusercontent.com/paulgb/BarbBlock/master/BarbBlock.txt
       disconnect: &bh_disconnect
@@ -106,18 +98,24 @@ dns-blackhole:
         categories: # Advertising, Analytics, Disconnect, Social
           - Advertising
           - Analytics
+          - Disconnect
+          - Social
   config:
-    zone_file: /etc/unbound/blackhole.zone
+    zone_file: unbound-nxdomain.blacklist
+    zone_file_dir: './'
     # {domain} will be replaced by the blackholed domain, do not change it here
-    zone_data: 'local-zone: "{domain}" always_nxdomain'
+    zone_data: 'local-zone: "{domain}" always_nxdomain' # For Unbound
+    # zone_data: '{domain}=' # For PowerDNS recursor
+    # zone_data: 'server=/{domain}/' # For Dnsmasq
+    # blackhole_lists: *bh_lists
     blackhole_lists:
-      hosts:
-        - http://winhelp2002.mvps.org/hosts.txt
-      easylist: *bh_easy
-      disconnect: *bh_disconnect
+      hosts: *bh_hosts
+    prefix: "view:    \nname: blacklistview\n" # Define the blacklist as Unbound view
+    suffix:
+
 ```
 
-In this example you would keep `easylist` and `disconnect` lists, but would remove all host file lists except mvps.
+In this example you would only use the host files as source. This example also creates an Unbound view called `blacklistview` by adding the `prefix`.
 
 FAQ
 ---

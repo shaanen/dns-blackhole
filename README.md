@@ -111,7 +111,7 @@ dns-blackhole:
     # blackhole_lists: *bh_lists
     blackhole_lists:
       hosts: *bh_hosts
-    prefix: "view:    \nname: blacklistview\n" # Define the blacklist as Unbound view
+    prefix: "view:\nname: blacklistview\n" # Define the blacklist as Unbound view
     suffix:
 
 ```

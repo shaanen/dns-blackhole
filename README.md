@@ -70,7 +70,8 @@ Use the following `zone_data` in your `dns-blackhole.yml`:
 zone_data: '127.0.0.1 {domain}'
 ```
 
-Once you're happy with your configuration Just run `python3 dns-blackhole.py dns-blackhole.yml`.    
+Once you're happy with your configuration, just run: 
+`python3 dns-blackhole.py dns-blackhole.yml`.    
 
 Configuration
 -------------
@@ -136,9 +137,3 @@ By using the `forward-zones-file` pdns-recursor takes around 5 more seconds to p
 #### Which DNS server is the best?
 
 It's really a matter of preferences and what you have available. Use the one you're the most comfortable with.  
-
-TODO
-----
-
-- Cache is not implemented yet
-- Log is not implemented yet

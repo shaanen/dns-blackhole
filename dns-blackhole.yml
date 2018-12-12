@@ -7,8 +7,8 @@ dns-blackhole:
         - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
         - http://someonewhocares.org/hosts/hosts
         - https://hosts-file.net/download/hosts.txt
-        - http://winhelp2002.mvps.org/hosts.txt
-      # - http://www.malwaredomainlist.com/hostslist/hosts.txt # Website down as of November 13th 2018
+#        - http://winhelp2002.mvps.org/hosts.txt # Website down (2018-12-12)
+        - http://www.malwaredomainlist.com/hostslist/hosts.txt
         - https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts;showintro=0
       easylist: &bh_easylist
         - https://easylist.to/easylist/easylist.txt

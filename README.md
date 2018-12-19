@@ -89,7 +89,7 @@ dns-blackhole:
         - http://someonewhocares.org/hosts/hosts
         - https://hosts-file.net/download/hosts.txt
         - http://winhelp2002.mvps.org/hosts.txt
-      # - http://www.malwaredomainlist.com/hostslist/hosts.txt # Website down as of November 13th 2018
+        - http://www.malwaredomainlist.com/hostslist/hosts.txt
         - https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts;showintro=0
       easylist: &bh_easylist
         - https://easylist.to/easylist/easylist.txt
@@ -113,7 +113,6 @@ dns-blackhole:
       hosts: *bh_hosts
     prefix: "view:\nname: blacklistview\n" # Define the blacklist as Unbound view
     suffix:
-
 ```
 
 In this example you would only use the host files as source. The optional `prefix` entry defines the blacklist as an Unbound view called `blacklistview`.

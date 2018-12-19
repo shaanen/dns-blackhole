@@ -97,52 +97,54 @@ def process_host_file_url(bh_list, white_list, host_file_urls):
             print('[!] Fetch and parse URL: {0}'.format(url))
             r = requests.get(url)
         except:
-            sys.exit('Request to {0} failed: {1}'.format(url, sys.exc_info()[0]))
+            print('Request to {0} failed: {1}. Skipping source.'.format(url, sys.exc_info()[0]))
+            continue
 
         if r.status_code != 200:
-            sys.exit('Incorrect return code from {0}: {1}.'.format(url, r.status_code))
-        else:
-            used_sources.append(r.url)
-            for line in r.iter_lines():
+            print('Incorrect return code from {0}: {1}. Skipping source.'.format(url, r.status_code))
+            continue
+
+        used_sources.append(r.url)
+        for line in r.iter_lines():
+            try:
+                # If utf8 decode fails jumps next item
+                line = line.decode('utf-8')
+            except:
+                continue
+
+            if line.startswith('127.0.0.1') or line.startswith('0.0.0.0'):
+                # Remove ip
                 try:
-                    # If utf8 decode fails jumps next item
-                    line = line.decode('utf-8')
+                    n_host = line.split('127.0.0.1')[1]
+                except IndexError:
+                    n_host = line.split('0.0.0.0')[1]
                 except:
                     continue
 
-                if line.startswith('127.0.0.1') or line.startswith('0.0.0.0'):
-                    # Remove ip
-                    try:
-                        n_host = line.split('127.0.0.1')[1]
-                    except IndexError:
-                        n_host = line.split('0.0.0.0')[1]
-                    except:
-                        continue
+                # Fix some host lists having \t instead of space
+                if n_host.startswith('\t'):
+                    n_host = n_host.lstrip('\t')
 
-                    # Fix some host lists having \t instead of space
-                    if n_host.startswith('\t'):
-                        n_host = n_host.lstrip('\t')
+                # Ensure we only keep host as some list add comments
+                n_host = n_host.split('#')[0].rstrip()
+                # Some leave ports
+                n_host = n_host.split(':')[0]
+                # Some leave spaces prefixed
+                n_host = n_host.replace(' ', '')
+                # Some put caps
+                n_host = n_host.lower()
 
-                    # Ensure we only keep host as some list add comments
-                    n_host = n_host.split('#')[0].rstrip()
-                    # Some leave ports
-                    n_host = n_host.split(':')[0]
-                    # Some leave spaces prefixed
-                    n_host = n_host.replace(' ', '')
-                    # Some put caps
-                    n_host = n_host.lower()
+                # Remove local domains
+                if n_host == 'localhost.localdomain' or n_host == 'localhost':
+                    continue
 
-                    # Remove local domains
-                    if n_host == 'localhost.localdomain' or n_host == 'localhost':
-                        continue
+                # Ignore empty string
+                if n_host == '':
+                    continue
 
-                    # Ignore empty string
-                    if n_host == '':
-                        continue
-
-                    # Now add the hosts to the list
-                    if n_host not in white_list:
-                        bh_list.append(n_host[::-1])
+                # Now add the hosts to the list
+                if n_host not in white_list:
+                    bh_list.append(n_host[::-1])
 
     return bh_list
 
@@ -153,60 +155,63 @@ def process_easylist_url(bh_list, white_list, easy_list_url):
             print('[!] Fetch and parse URL: {0}'.format(url))
             r = requests.get(url)
         except:
-            sys.exit('Request to {0} failed: {1}.'.format(url, sys.exc_info()[0]))
+            print('Request to {0} failed: {1}. Skipping source.'.format(url, sys.exc_info()[0]))
+            continue
 
         if r.status_code != 200:
-            sys.exit('Incorrect return code from {0}: {1}.'.format(url, r.status_code))
-        else:
-            used_sources.append(r.url)
-            for line in r.iter_lines():
+            print('Incorrect return code from {0}: {1}. Skipping source.'.format(url, r.status_code))
+            continue
+            
+
+        used_sources.append(r.url)
+        for line in r.iter_lines():
+            try:
+                # If utf8 decode fails jumps next item
+                line = line.decode('utf-8')
+            except:
+                continue
+
+            if line.startswith('||'):
+                # I don't want to bother with wildcards
+                if '*' in line:
+                    continue
+
+                # Keep domain
                 try:
-                    # If utf8 decode fails jumps next item
-                    line = line.decode('utf-8')
+                    n_host = line.split('^')[0]
                 except:
                     continue
 
-                if line.startswith('||'):
-                    # I don't want to bother with wildcards
-                    if '*' in line:
-                        continue
+                # and get rid of those '$'
+                try:
+                    n_host = n_host.split('$')[0]
+                except IndexError:
+                    pass
 
-                    # Keep domain
-                    try:
-                        n_host = line.split('^')[0]
-                    except:
-                        continue
+                # Remove leading '||'
+                n_host = n_host.lstrip('||')
 
-                    # and get rid of those '$'
-                    try:
-                        n_host = n_host.split('$')[0]
-                    except IndexError:
-                        pass
+                # Some entries are urls
+                if '/' in n_host:
+                    n_host = n_host.split('/')[0]
 
-                    # Remove leading '||'
-                    n_host = n_host.lstrip('||')
+                # Some entries are no domains...
+                if '.' not in n_host:
+                    continue
 
-                    # Some entries are urls
-                    if '/' in n_host:
-                        n_host = n_host.split('/')[0]
+                # Some leave a final '.'
+                n_host = n_host.rstrip('.')
 
-                    # Some entries are no domains...
-                    if '.' not in n_host:
-                        continue
+                # Some put caps
+                n_host = n_host.lower()
 
-                    # Some leave a final '.'
-                    n_host = n_host.rstrip('.')
+                # ignore empty string
+                if n_host == '':
+                    continue
 
-                    # Some put caps
-                    n_host = n_host.lower()
-
-                    # ignore empty string
-                    if n_host == '':
-                        continue
-
-                    # Now add the hosts to the list
-                    if n_host not in white_list:
-                        bh_list.append(n_host[::-1])
+                # Now add the hosts to the list
+                if n_host not in white_list:
+                    bh_list.append(n_host[::-1])
     return bh_list
 
 
@@ -215,21 +220,21 @@ def process_disconnect_url(bh_list, white_list, d_url, d_cat):
         print('[!] Fetch and parse URL: {0}'.format(d_url))
         r = requests.get(d_url)
     except:
-        print('Request to {0} failed: {1}'.format(d_url, sys.exc_info()[0]))
-        sys.exit()
+        print('Request to {0} failed: {1}. Skipping source.'.format(d_url, sys.exc_info()[0]))
+        return bh_list
 
     if r.status_code == 200:
         try:
             j = r.json()
         except:
-            print('Seems like we did not fetch a json dict')
-            sys.exit()
+            print('{0} did not return a json dict. Skipping source.'.format(d_url))
+            return bh_list
     else:
-        print('Incorrect return code from {0}: {1}. Zonefile not created.'.format(d_url, r.status_code))
-        sys.exit(1)
+        print('Incorrect return code from {0}: {1}. Skipping source.'.format(d_url, r.status_code))
+        return bh_list
 
-    used_sources.append(r.url)
     if 'categories' in j:
+        used_sources.append(r.url)
         for category in j['categories']:
             if category in d_cat:
                 for sub_dict in j['categories'][category]:
@@ -243,8 +248,7 @@ def process_disconnect_url(bh_list, white_list, d_url, d_cat):
                                     if host not in white_list:
                                         bh_list.append(host[::-1])
     else:
-        print('"categories" key not found in dict, nothing to process')
-        return bh_list
+        print('"categories" key not found in dict returned from {0}. Skipping source.'.format(d_url))
     return bh_list
 
 
